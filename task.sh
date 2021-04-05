@@ -1,41 +1,67 @@
-# num cores  
-NUM_CORES=$(grep -c processor /proc/cpuinfo)
-echo "num cpu cores: $NUM_CORES"
+# add date function from https://serverfault.com/questions/310098/how-to-add-a-timestamp-to-bash-script-log
+# configured to show UTC time
+adddate() {
+    while IFS= read -r line; do
+        if [ -z "$line" ];
+        then
+            echo $line;
+        else
+            printf '%s %s\n' "$(date -u)" "$line";
+        fi
+    done
+}
 
-#average of CPU usage taken by doing 5 calculations with a 1 second interval in between
-echo 'CPU usage averaged across 5 readings'
-mpstat -P ALL 1 5 | tail -n `expr "$NUM_CORES" + "2"`
+monitor_system() {
+    # num cores  
+    NUM_CORES=$(grep -c processor /proc/cpuinfo)
+    echo "num cpu cores: $NUM_CORES"
 
-echo "\nMemory usage"
-top -b | head -4 | tail -1
- 
-echo "\nUptime"
-uptime -p
+    #average of CPU usage taken by doing 5 calculations with a 1 second interval in between
+    echo 'CPU usage averaged across 5 readings'
+    mpstat -P ALL 1 5 | tail -n `expr "$NUM_CORES" + "2"`
 
-echo "\nDisk Health"
-lsblk | grep disk | awk '{print $1}' | while read device ; do smartctl -H /dev/$device ; done
-
-echo "\nProcess Count" 
-ps -e | wc -l
+    echo ''
+    echo "Memory usage"
+    top -b | head -4 | tail -1
     
-echo "\nNetwork Interfaces" 
-ip link show
+    echo ''
+    echo "Uptime"
+    uptime -p
 
-echo "\nNetwork Usage" 
-bmon -o ascii:quitafter=2 | tail -n +2 | awk '/Interfaces/,0'
+    echo ''
+    echo "Disk Health"
+    lsblk | grep disk | awk '{print $1}' | while read device ; do smartctl -H /dev/$device ; done
 
-echo "\nDisk Information" 
-df
-# human readable option -H/h
-# df -h
+    echo ''
+    echo "Process Count" 
+    ps -e | wc -l
+        
+    echo ''
+    echo "Network Interfaces" 
+    ip link show
 
-echo "\nBattery Information"
-acpi
-acpi -t
+    echo ''
+    echo "Network Usage" 
+    bmon -o ascii:quitafter=2 | tail -n +2 | awk '/Interfaces/,0'
 
-# to get battery level without downloading packages (using grep)
-# cat /sys/class/power_supply/BAT0/capacity
+    echo ''
+    echo "Disk Information" 
+    df
+    # human readable option -H/h
+    # df -h
 
-echo "\nSensors"
-# to get temperatures and other sensors data
-sensors
+    echo ''
+    echo "Battery Information"
+    acpi
+    acpi -t
+
+    # to get battery level without downloading packages (using grep)
+    # cat /sys/class/power_supply/BAT0/capacity
+
+    echo ''
+    echo "Sensors"
+    # to get temperatures and other sensors data
+    sensors
+}
+
+monitor_system | adddate
